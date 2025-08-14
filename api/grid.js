@@ -74,14 +74,11 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 
 /* ===== Container + Grid (style Insta) ===== */
 .image-grid-container{position:relative;width:100%;max-width:750px;margin:0 auto;padding:0 4px}
-.image-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);
-  gap:var(--gap);width:100%;
-}
+.image-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap);width:100%}
 
 /* ===== Cards ===== */
 .card{
-  position:relative;margin:0 !important;aspect-ratio:4/5; /* 4:5 */
+  position:relative;margin:0 !important;aspect-ratio:4/5;
   width:100%;height:auto;border-radius:var(--r);overflow:hidden;background:#f3f4f6;cursor:pointer
 }
 .card img,.card video{width:100%;height:100%;object-fit:cover;display:block}
@@ -103,7 +100,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 .h-title{font-weight:700;font-size:15px;line-height:1.2;text-shadow:0 1px 0 rgba(0,0,0,.2)}
 .h-desc{font-size:12px;opacity:.95;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* ===== Lightbox (pas de mini-galerie) ===== */
+/* ===== Lightbox ===== */
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
 .lightbox{
   background:#111;border-radius:16px;max-width:min(95vw,1200px);max-height:92vh;overflow:hidden;
@@ -172,12 +169,12 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 <div class="image-grid-container">
   <div class="image-grid" id="grid">
     ${items.map(it => {
-      const first = it.media[0];
-      const mtypes = it.media.map(m => m.type).join(',');
-      const msrcs  = it.media.map(m => m.url).join('|');
-      const hasCarousel = it.media.length>1;
-      const showPin = it.pinned;
+      const mediaAttr = encodeURIComponent(JSON.stringify(it.media || [])); // << FIX: JSON complet
+      const first = (it.media && it.media[0]) || {type:'image', url:''};
+      const hasCarousel = (it.media && it.media.length>1) || false;
+      const showPin = !!it.pinned;
       const showCarousel = hasCarousel && !showPin; // pin > carousel
+
       return `
       <figure class="card"
         data-platforms="${esc((it.platforms||[]).join(','))}"
@@ -185,9 +182,8 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
         data-name="${esc(it.name)}"
         data-desc="${esc(it.description||'')}"
         data-date="${esc(it.date||'')}"
-        data-pinned="${it.pinned ? "true":"false"}"
-        data-mtypes="${esc(mtypes)}"
-        data-msrcs="${esc(msrcs)}">
+        data-pinned="${showPin ? "true":"false"}"
+        data-media="${mediaAttr}">
         ${first.type === 'video'
           ? `<video muted playsinline preload="metadata" src="${esc(first.url)}"></video><div class="play">▶</div>`
           : `<img src="${esc(first.url)}" alt="${esc(it.name)}" loading="lazy"/>`
@@ -251,7 +247,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     return da<db ? 1 : da>db ? -1 : 0;
   }).forEach(c=>grid.appendChild(c));
 
-  // Match util
+  // Helpers match & count
   function matchCard(card, platform, status){
     const plats=(card.dataset.platforms||"").split(',').filter(Boolean);
     const st=card.dataset.status||"";
@@ -269,7 +265,6 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     });
   }
 
-  // Recalc counters dynamically
   function recalcCounts(){
     const grpPlat = document.getElementById('grp-platforms');
     const grpStat = document.getElementById('grp-status');
@@ -330,7 +325,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   document.getElementById('refresh').addEventListener('click', ()=> location.reload());
   ${autoRefresh ? `setInterval(()=>location.reload(), ${autoRefresh*1000});` : ""}
 
-  // LIGHTBOX (flèches only)
+  // LIGHTBOX
   const backdrop=document.getElementById('backdrop');
   const lbImg=document.getElementById('lb-img');
   const lbVid=document.getElementById('lb-vid');
@@ -386,10 +381,21 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   }
 
   function openLB(card){
-    curTypes = (card.dataset.mtypes||"").split(',').map(s=>s.trim()).filter(Boolean);
-    curList  = (card.dataset.msrcs ||"").split('|').map(s=>s.trim()).filter(Boolean);
-    const L = Math.min(curTypes.length, curList.length);
-    curTypes = curTypes.slice(0,L); curList = curList.slice(0,L);
+    // <<< FIX: on lit le JSON complet depuis data-media (fin des séparateurs fragiles)
+    let media = [];
+    try { media = JSON.parse(decodeURIComponent(card.dataset.media || "[]")); }
+    catch { media = []; }
+
+    // fallback rétro-compat si besoin
+    if (!Array.isArray(media) || media.length === 0) {
+      const types = (card.dataset.mtypes||"").split(',').map(s=>s.trim()).filter(Boolean);
+      const srcs  = (card.dataset.msrcs ||"").split('|').map(s=>s.trim()).filter(Boolean);
+      const L = Math.min(types.length, srcs.length);
+      media = Array.from({length:L}, (_,i)=>({type:types[i], url:srcs[i]}));
+    }
+
+    curTypes = media.map(m=>m.type);
+    curList  = media.map(m=>m.url);
 
     showMedia(0);
     fillInfoFromCard(card);
