@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     }
 
     const size        = Math.min(Number(req.query.size || 60), 100);
-    const gap         = Number(req.query.gap || 1);   // gap 1px par défaut
+    const gap         = Number(req.query.gap || 1);   // 1px style Instagram
     const radius      = Number(req.query.radius || 0);
     const autoRefresh = Math.max(0, Number(req.query.autorefresh || 0));
 
@@ -45,15 +45,10 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 <style>
 :root{--gap:${gap}px;--r:${radius}px}
 
-/* ===== Header (exact class fournie) ===== */
+/* ===== Header (classe fournie) ===== */
 .header.jsx-af86871aeff69634{
-  width:100%;
-  background-color:#fff;
-  border-bottom:1px solid #efefef;
-  padding:4px 0 12px 0;
-  overflow:visible;
-  position:relative;
-  z-index:100;
+  width:100%;background:#fff;border-bottom:1px solid #efefef;
+  padding:4px 0 12px 0;overflow:visible;position:relative;z-index:100;
 }
 .header-inner{max-width:750px;margin:0 auto;padding:0 4px;display:flex;gap:8px;align-items:center}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #111827;background:#111827;color:#fff;padding:6px 12px;border-radius:12px;cursor:pointer;font-size:13px}
@@ -75,18 +70,20 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 .opt-radio{width:11px;height:11px;border-radius:999px;border:2px solid #111827;display:inline-block}
 .opt-item.active .opt-radio{background:#111827}
 .opt-count{font-size:12px;color:#6b7280}
+.opt-item.disabled{opacity:.45;pointer-events:none;cursor:not-allowed}
 
-/* ===== Container + Grid (exact style fourni) ===== */
-.image-grid-container{
-  position:relative;width:100%;max-width:750px;margin:0 auto;padding:0 4px;
-}
+/* ===== Container + Grid (style Insta) ===== */
+.image-grid-container{position:relative;width:100%;max-width:750px;margin:0 auto;padding:0 4px}
 .image-grid{
   display:grid;grid-template-columns:repeat(3,1fr);
   gap:var(--gap);width:100%;
 }
 
-/* Cards */
-.card{position:relative;aspect-ratio:4/5;width:100%;height:auto;;overflow:hidden;background:#f3f4f6;margin:0 !important;cursor:pointer}
+/* ===== Cards ===== */
+.card{
+  position:relative;margin:0 !important;aspect-ratio:4/5; /* 4:5 */
+  width:100%;height:auto;border-radius:var(--r);overflow:hidden;background:#f3f4f6;cursor:pointer
+}
 .card img,.card video{width:100%;height:100%;object-fit:cover;display:block}
 .card video{background:#000}
 
@@ -96,7 +93,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 .icn svg{width:14px;height:14px}
 .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:999px;background:rgba(17,24,39,.7);display:grid;place-items:center;color:#fff;font-size:20px}
 
-/* Hoverbar — cachée par défaut, visible seulement au survol */
+/* Hoverbar — cachée par défaut, visible au survol */
 .hoverbar{
   position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent, rgba(0,0,0,.85));color:#fff;
   padding:10px 12px;display:grid;gap:6px;transform:translateY(100%);opacity:0;pointer-events:none;
@@ -106,7 +103,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 .h-title{font-weight:700;font-size:15px;line-height:1.2;text-shadow:0 1px 0 rgba(0,0,0,.2)}
 .h-desc{font-size:12px;opacity:.95;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* ===== Lightbox (media + panneau infos, sans mini-galerie) ===== */
+/* ===== Lightbox (pas de mini-galerie) ===== */
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
 .lightbox{
   background:#111;border-radius:16px;max-width:min(95vw,1200px);max-height:92vh;overflow:hidden;
@@ -180,7 +177,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
       const msrcs  = it.media.map(m => m.url).join('|');
       const hasCarousel = it.media.length>1;
       const showPin = it.pinned;
-      const showCarousel = hasCarousel && !showPin;
+      const showCarousel = hasCarousel && !showPin; // pin > carousel
       return `
       <figure class="card"
         data-platforms="${esc((it.platforms||[]).join(','))}"
@@ -197,15 +194,11 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
         }
         ${showPin ? `
           <div class="icn" title="Pinned">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M14 3l7 7-3 1-3 7-2-2-2-2 7-3 1-3-7-7zM5 21l6-6 2 2-6 6H5v-2z"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 3l7 7-3 1-3 7-2-2-2-2 7-3 1-3-7-7zM5 21l6-6 2 2-6 6H5v-2z"/></svg>
           </div>` : ``}
         ${showCarousel ? `
           <div class="icn" title="Carousel">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M7 7h10v10H7z"/><path d="M3 3h10v10H3z"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v10H7z"/><path d="M3 3h10v10H3z"/></svg>
           </div>` : ``}
         <figcaption class="hoverbar">
           <div class="h-title">${esc(it.name)}</div>
@@ -216,7 +209,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   </div>
 </div>
 
-<!-- LIGHTBOX (sans mini-galerie) -->
+<!-- LIGHTBOX -->
 <div class="backdrop" id="backdrop" aria-hidden="true">
   <div class="lightbox">
     <section class="lb-media">
@@ -250,7 +243,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   const grid = document.getElementById('grid');
   const cards = Array.from(grid.querySelectorAll('.card'));
 
-  // tri (pinned, date desc)
+  // tri (Pinned, date desc)
   cards.sort((a,b)=>{
     const pa=a.dataset.pinned==="true", pb=b.dataset.pinned==="true";
     if (pa!==pb) return pa ? -1 : 1;
@@ -258,18 +251,52 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     return da<db ? 1 : da>db ? -1 : 0;
   }).forEach(c=>grid.appendChild(c));
 
+  // Match util
+  function matchCard(card, platform, status){
+    const plats=(card.dataset.platforms||"").split(',').filter(Boolean);
+    const st=card.dataset.status||"";
+    const okP = !platform || plats.includes(platform);
+    const okS = !status   || st === status;
+    return okP && okS;
+  }
+  function countMatching({platform=null, status=null}){
+    let n=0; for(const c of cards) if(matchCard(c, platform, status)) n++; return n;
+  }
+
   function applyFilters(){
     cards.forEach(c=>{
-      const plats=(c.dataset.platforms||"").split(',').filter(Boolean);
-      const st=c.dataset.status||"";
-      const okPlat=!curPlat || plats.includes(curPlat);
-      const okStat=!curStat || st===curStat;
-      c.style.display = (okPlat&&okStat)? "" : "none";
+      c.style.display = matchCard(c, curPlat||null, curStat||null) ? "" : "none";
     });
   }
-  applyFilters();
 
-  // Filtres
+  // Recalc counters dynamically
+  function recalcCounts(){
+    const grpPlat = document.getElementById('grp-platforms');
+    const grpStat = document.getElementById('grp-status');
+
+    grpPlat.querySelectorAll('.opt-item').forEach(opt=>{
+      const plat = (opt.dataset.value||'') || null;
+      const cnt  = countMatching({platform: plat, status: curStat||null});
+      const span = opt.querySelector('.opt-count'); if(span) span.textContent = '('+cnt+')';
+      const isActive = opt.classList.contains('active');
+      opt.classList.toggle('disabled', cnt===0 && !isActive);
+      opt.setAttribute('aria-disabled', cnt===0 && !isActive ? 'true':'false');
+    });
+
+    grpStat.querySelectorAll('.opt-item').forEach(opt=>{
+      const st   = (opt.dataset.value||'') || null;
+      const cnt  = countMatching({platform: curPlat||null, status: st});
+      const span = opt.querySelector('.opt-count'); if(span) span.textContent = '('+cnt+')';
+      const isActive = opt.classList.contains('active');
+      opt.classList.toggle('disabled', cnt===0 && !isActive);
+      opt.setAttribute('aria-disabled', cnt===0 && !isActive ? 'true':'false');
+    });
+  }
+
+  applyFilters();
+  recalcCounts();
+
+  // Filtres UI
   const sheet = document.getElementById('filters');
   const btn   = document.getElementById('filtersBtn');
   btn.addEventListener('click', ()=>{
@@ -287,21 +314,23 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     selectLine(document.getElementById('grp-platforms'), it);
     curPlat = it.dataset.value || '';
     const u=new URL(location.href); curPlat?u.searchParams.set('platform',curPlat):u.searchParams.delete('platform');
-    history.replaceState(null,'',u); applyFilters();
+    history.replaceState(null,'',u);
+    applyFilters(); recalcCounts();
   });
   document.getElementById('grp-status').addEventListener('click', (e)=>{
     const it=e.target.closest('.opt-item'); if(!it) return;
     selectLine(document.getElementById('grp-status'), it);
     curStat = it.dataset.value || '';
     const u=new URL(location.href); curStat?u.searchParams.set('status',curStat):u.searchParams.delete('status');
-    history.replaceState(null,'',u); applyFilters();
+    history.replaceState(null,'',u);
+    applyFilters(); recalcCounts();
   });
 
   // Refresh
   document.getElementById('refresh').addEventListener('click', ()=> location.reload());
   ${autoRefresh ? `setInterval(()=>location.reload(), ${autoRefresh*1000});` : ""}
 
-  // LIGHTBOX (arrows only)
+  // LIGHTBOX (flèches only)
   const backdrop=document.getElementById('backdrop');
   const lbImg=document.getElementById('lb-img');
   const lbVid=document.getElementById('lb-vid');
@@ -310,7 +339,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   const nextBtn=document.getElementById('next');
   const stage=document.getElementById('stage');
 
-  // info panel refs
+  // Info panneaux
   const infoTitle=document.getElementById('info-title');
   const infoStatus=document.getElementById('info-status');
   const infoPinned=document.getElementById('info-pinned');
@@ -325,14 +354,9 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     const t = curTypes[i], src = curList[i];
     lbImg.style.display='none'; lbVid.style.display='none';
     if (t==='video'){
-      lbVid.src = src;
-      lbVid.currentTime = 0;
-      lbVid.style.display='block';
-      lbImg.removeAttribute('src');
+      lbVid.src = src; lbVid.currentTime = 0; lbVid.style.display='block'; lbImg.removeAttribute('src');
     }else{
-      lbImg.src = src;
-      lbImg.style.display='block';
-      lbVid.pause(); lbVid.removeAttribute('src');
+      lbImg.src = src; lbImg.style.display='block'; lbVid.pause(); lbVid.removeAttribute('src');
     }
     lbCount.textContent = (i+1) + "/" + curList.length;
     const nav = curList.length>1;
@@ -346,8 +370,8 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     if (st){
       infoStatus.style.display='inline-block';
       infoStatus.textContent = st;
-      const s = st.toLowerCase();
       infoStatus.className='badge';
+      const s = st.toLowerCase();
       if (/approved|published|ok|ready|valid/.test(s)) infoStatus.classList.add('green');
       else if (/draft|pending|planned|planifié|planning/.test(s)) infoStatus.classList.add('yellow');
     } else { infoStatus.style.display='none'; infoStatus.className='badge'; }
@@ -362,14 +386,10 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   }
 
   function openLB(card){
-    // IMPORTANT : on lit toutes les sources/mimes du dataset (séparateurs identiques à la génération)
     curTypes = (card.dataset.mtypes||"").split(',').map(s=>s.trim()).filter(Boolean);
     curList  = (card.dataset.msrcs ||"").split('|').map(s=>s.trim()).filter(Boolean);
-
-    // Sécurité : si les longueurs ne matchent pas, on recadre
     const L = Math.min(curTypes.length, curList.length);
-    curTypes = curTypes.slice(0,L);
-    curList  = curList.slice(0,L);
+    curTypes = curTypes.slice(0,L); curList = curList.slice(0,L);
 
     showMedia(0);
     fillInfoFromCard(card);
