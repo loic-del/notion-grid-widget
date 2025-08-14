@@ -20,6 +20,26 @@ export default async function handler(req, res) {
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=120");
+     export default async function handler(req, res) {
+   try {
+     const databaseId = process.env.NOTION_DATABASE_ID;
+     if (!process.env.NOTION_TOKEN || !databaseId) {
+       res.status(500).send("Server not configured: NOTION_TOKEN / NOTION_DATABASE_ID");
+       return;
+     }
+@@
+     const html = renderHTML({ items, cols, gap, radius, showCaptions });
+
+     res.setHeader("Content-Type", "text/html; charset=utf-8");
++    // Autoriser explicitement l'affichage en iframe dans Notion
++    res.setHeader("Content-Security-Policy", "frame-ancestors https://www.notion.so https://notion.so https://*.notion.site;");
+     res.setHeader("Cache-Control", "public, max-age=120");
+     res.status(200).send(html);
+   } catch (err) {
+     console.error(err);
+     res.status(500).send("Internal Error");
+   }
+ }
     res.status(200).send(html);
   } catch (err) {
     console.error(err);
