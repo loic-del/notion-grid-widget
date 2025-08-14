@@ -10,7 +10,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Options via query
+    // Query params
     const size = Math.min(Number(req.query.size || 60), 100);
     const gap = req.query.gap || 6;
     const cols = req.query.cols || 3;
@@ -20,25 +20,23 @@ export default async function handler(req, res) {
     const items = await fetchPosts({ databaseId, pageSize: size });
     const html = renderHTML({ items, cols, gap, radius, showCaptions });
 
-    // Autorise l’embed dans Notion
+    // Autoriser l'embed Notion
     res.setHeader("Content-Security-Policy",
       "frame-ancestors https://www.notion.so https://notion.so https://*.notion.site;");
     res.setHeader("Cache-Control", "public, max-age=120");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.status(200).send(html);
-  } } catch (err) {
-  console.error("ERROR in /api/grid:", err); // <-- log complet
-  res.status(500).send(`Internal Error: ${err.message || err}`);
-}
+    res.status(200).send(html); // <-- UNE SEULE réponse
+  } catch (err) {
+    console.error("ERROR in /api/grid:", err);
+    res.status(500)
+      .setHeader("Content-Type","text/plain; charset=utf-8")
+      .end("Internal Error: " + (err?.message || String(err)));
+  }
 }
 
 function esc(s = "") {
   return String(s).replace(/[&<>\"']/g, c => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   })[c]);
 }
 
