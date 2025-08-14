@@ -7,8 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1) on récupère la ressource (autorise les redirections)
-    const resp = await fetch(target, {
+    const r1 = await fetch(target, {
       redirect: "follow",
       headers: {
         "User-Agent":
@@ -16,70 +15,82 @@ export default async function handler(req, res) {
           "(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
         "Accept":
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/*,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
       },
     });
 
-    if (!resp.ok) throw new Error(`Upstream ${resp.status}`);
+    if (!r1.ok) throw new Error(`Upstream ${r1.status}`);
+    const ct1 = (r1.headers.get("content-type") || "").toLowerCase();
 
-    let ct = (resp.headers.get("content-type") || "").toLowerCase();
-
-    // 2) Si c'est déjà une image → on stream direct
-    if (ct.startsWith("image/")) {
-      const buf = Buffer.from(await resp.arrayBuffer());
-      res.setHeader("Content-Type", ct);
-      res.setHeader(
-        "Cache-Control",
-        "public, s-maxage=86400, max-age=86400, stale-while-revalidate=604800"
-      );
+    // Déjà une image ? on stream directement
+    if (ct1.startsWith("image/")) {
+      const buf = Buffer.from(await r1.arrayBuffer());
+      res.setHeader("Content-Type", ct1 || "image/jpeg");
+      res.setHeader("Cache-Control", "public, s-maxage=86400, max-age=86400, stale-while-revalidate=604800");
       res.status(200).send(buf);
       return;
     }
 
-    // 3) Si c'est de l'HTML (ex: Canva), on extrait og:image / twitter:image
-    if (ct.includes("text/html")) {
-      const html = await resp.text();
+    // HTML → extraire l'og:image / twitter:image
+    if (ct1.includes("text/html")) {
+      const html = await r1.text();
+      // Essayes plusieurs variantes
+      const rx = [
+        /<meta[^>]+property=["']og:image:secure_url["'][^>]+content=["']([^"']+)["']/i,
+        /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+        /<meta[^>]+name=["']twitter:image:src["'][^>]+content=["']([^"']+)["']/i,
+        /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+      ];
+      let imgUrl = null;
+      for (const re of rx) {
+        const m = html.match(re);
+        if (m && m[1]) { imgUrl = m[1]; break; }
+      }
 
-      // cherche og:image / og:image:secure_url / twitter:image
-      const m =
-        html.match(/<meta[^>]+property=["']og:image:secure_url["'][^>]+content=["']([^"']+)["']/i) ||
-        html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
-        html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
+      if (imgUrl) {
+        // Résoudre URL relative
+        try { imgUrl = new URL(imgUrl, r1.url).toString(); } catch {}
 
-      if (m && m[1]) {
-        const imgUrl = m[1];
-        // On refait un fetch de cette image
-        const imgResp = await fetch(imgUrl, {
+        // Télécharge l'image finale (avec referer Canva au cas où)
+        const r2 = await fetch(imgUrl, {
           redirect: "follow",
-          headers: { "User-Agent": "Mozilla/5.0" },
+          headers: {
+            "User-Agent": "Mozilla/5.0",
+            "Referer": "https://www.canva.com/",
+            "Accept": "image/avif,image/webp,image/*,*/*;q=0.8",
+          },
         });
-        if (!imgResp.ok) throw new Error(`OG image upstream ${imgResp.status}`);
+        if (!r2.ok) throw new Error(`OG image upstream ${r2.status}`);
 
-        const imgCt = imgResp.headers.get("content-type") || "image/jpeg";
-        const buf = Buffer.from(await imgResp.arrayBuffer());
-        res.setHeader("Content-Type", imgCt);
-        res.setHeader(
-          "Cache-Control",
-          "public, s-maxage=86400, max-age=86400, stale-while-revalidate=604800"
-        );
+        const ct2 = r2.headers.get("content-type") || "image/jpeg";
+        const buf = Buffer.from(await r2.arrayBuffer());
+        res.setHeader("Content-Type", ct2);
+        res.setHeader("Cache-Control", "public, s-maxage=86400, max-age=86400, stale-while-revalidate=604800");
         res.status(200).send(buf);
         return;
       }
     }
 
-    // 4) fallback : petit SVG “Image unavailable”
+    // Fallback SVG
     res
       .status(200)
       .setHeader("Content-Type", "image/svg+xml")
-      .send(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200"><rect width="100%" height="100%" fill="#e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="32" fill="#9ca3af">Image unavailable</text></svg>`
-      );
+      .send(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200">
+        <rect width="100%" height="100%" fill="#e5e7eb"/>
+        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+              font-family="sans-serif" font-size="32" fill="#9ca3af">Image unavailable</text>
+      </svg>`);
   } catch (e) {
     console.error("IMG proxy error:", e?.message || e);
     res
       .status(200)
       .setHeader("Content-Type", "image/svg+xml")
-      .send(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200"><rect width="100%" height="100%" fill="#e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="32" fill="#9ca3af">Image unavailable</text></svg>`
-      );
+      .send(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200">
+        <rect width="100%" height="100%" fill="#e5e7eb"/>
+        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+              font-family="sans-serif" font-size="32" fill="#9ca3af">Image unavailable</text>
+      </svg>`);
   }
 }
