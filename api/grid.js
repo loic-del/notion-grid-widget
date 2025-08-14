@@ -10,8 +10,8 @@ export default async function handler(req, res) {
     }
 
     const size        = Math.min(Number(req.query.size || 60), 100);
-    const gap         = Number(req.query.gap || 12);
-    const radius      = Number(req.query.radius || 14);
+    const gap         = Number(req.query.gap || 1);   // gap 1px par défaut
+    const radius      = Number(req.query.radius || 0);
     const autoRefresh = Math.max(0, Number(req.query.autorefresh || 0));
 
     const items = await fetchPosts({ databaseId, pageSize: size });
@@ -43,13 +43,19 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Grid</title>
 <style>
-:root{--gap:${gap}px;--r:${radius}px;--mw:1200px}
-*{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:#111827}
-.wrap{padding:14px}
-.container{max-width:var(--mw);margin:0 auto}
+:root{--gap:${gap}px;--r:${radius}px}
 
-/* ===== Top bar ===== */
-.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+/* ===== Header (exact class fournie) ===== */
+.header.jsx-af86871aeff69634{
+  width:100%;
+  background-color:#fff;
+  border-bottom:1px solid #efefef;
+  padding:4px 0 12px 0;
+  overflow:visible;
+  position:relative;
+  z-index:100;
+}
+.header-inner{max-width:750px;margin:0 auto;padding:0 4px;display:flex;gap:8px;align-items:center}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #111827;background:#111827;color:#fff;padding:6px 12px;border-radius:12px;cursor:pointer;font-size:13px}
 .btn svg{width:14px;height:14px}
 .btn-ghost{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;background:#fff;color:#111827;padding:6px 10px;border-radius:12px;cursor:pointer}
@@ -70,58 +76,51 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 .opt-item.active .opt-radio{background:#111827}
 .opt-count{font-size:12px;color:#6b7280}
 
-/* ===== GRID — 3 colonnes fixes ===== */
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap)}
+/* ===== Container + Grid (exact style fourni) ===== */
+.image-grid-container{
+  position:relative;width:100%;max-width:750px;margin:0 auto;padding:0 4px;
+}
+.image-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:var(--gap);width:100%;
+}
+
+/* Cards */
 .card{position:relative;aspect-ratio:1/1;border-radius:var(--r);overflow:hidden;background:#f3f4f6;cursor:pointer}
 .card img,.card video{width:100%;height:100%;object-fit:cover;display:block}
 .card video{background:#000}
 
-/* Overlays façon IG (top-right) */
+/* Overlays (pin prioritaire, sinon carousel) */
 .icn{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:8px;background:rgba(17,24,39,.85);
      color:#fff;display:grid;place-items:center}
 .icn svg{width:14px;height:14px}
-
-/* Bouton play (tuile vidéo) */
 .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:999px;background:rgba(17,24,39,.7);display:grid;place-items:center;color:#fff;font-size:20px}
 
-/* hover bar — cachée par défaut, visible uniquement au survol */
+/* Hoverbar — cachée par défaut, visible seulement au survol */
 .hoverbar{
-  position:absolute;left:0;right:0;bottom:0;
-  background:linear-gradient(transparent, rgba(0,0,0,.85));color:#fff;
-  padding:10px 12px;display:grid;gap:6px;
-  transform:translateY(100%);opacity:0;pointer-events:none;
+  position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent, rgba(0,0,0,.85));color:#fff;
+  padding:10px 12px;display:grid;gap:6px;transform:translateY(100%);opacity:0;pointer-events:none;
   transition:transform .18s ease, opacity .18s ease;
 }
 .card:hover .hoverbar{transform:translateY(0);opacity:1;pointer-events:auto}
 .h-title{font-weight:700;font-size:15px;line-height:1.2;text-shadow:0 1px 0 rgba(0,0,0,.2)}
 .h-desc{font-size:12px;opacity:.95;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* empty */
-.empty{display:none;margin-top:var(--gap)}
-.ph{aspect-ratio:1/1;border-radius:var(--r);background:#e5e7eb;display:grid;place-items:center;color:#9ca3af;font-size:12px}
-
-/* ===== LIGHTBOX (media + panneau d'infos + thumbnails) ===== */
+/* ===== Lightbox (media + panneau infos, sans mini-galerie) ===== */
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
 .lightbox{
   background:#111;border-radius:16px;max-width:min(95vw,1200px);max-height:92vh;overflow:hidden;
-  display:grid;grid-template-columns: minmax(0,1fr) 380px; /* media | info */
+  display:grid;grid-template-columns: minmax(0,1fr) 360px; /* media | info */
 }
-.lb-media{position:relative;background:#000;display:grid;grid-template-rows: auto 1fr auto}
+.lb-media{position:relative;background:#000;display:grid;grid-template-rows:auto 1fr}
 .lb-top{display:flex;justify-content:flex-end;padding:8px}
 .lb-count{background:rgba(17,24,39,.85);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px}
 .stage{position:relative;display:grid;place-items:center}
-.stage img,.stage video{max-width:100%;max-height:76vh;width:auto;height:auto;display:block}
+.stage img,.stage video{max-width:100%;max-height:84vh;width:auto;height:auto;display:block}
 .arrow{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:999px;border:none;background:rgba(17,24,39,.85);color:#fff;display:grid;place-items:center;font-size:18px;cursor:pointer}
 .arrow.left{left:12px}.arrow.right{right:12px}
 
-/* Thumbnails */
-.thumbs{display:flex;gap:6px;padding:8px;overflow:auto;background:#0b0b0b}
-.thumb{width:56px;height:56px;border-radius:8px;background:#1f2937;display:grid;place-items:center;opacity:.65;cursor:pointer;flex:0 0 auto}
-.thumb img{width:100%;height:100%;object-fit:cover;border-radius:8px;display:block}
-.thumb.video{color:#fff;font-size:18px}
-.thumb.active{outline:2px solid #fff;opacity:1}
-
-/* panneau d'infos */
+/* Panneau d'infos */
 .lb-info{background:#fff;color:#111827;display:flex;flex-direction:column;padding:18px 16px 16px}
 .info-title{font-weight:700;font-size:18px;line-height:1.2;margin-bottom:4px}
 .info-row{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:8px 0}
@@ -131,7 +130,6 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 .info-date{font-size:12px;color:#6b7280}
 .info-desc{font-size:14px;line-height:1.5;margin-top:8px;white-space:pre-wrap}
 
-/* Responsive */
 @media (max-width: 960px){
   .lightbox{grid-template-columns: 1fr;}
   .lb-info{max-height:45vh;overflow:auto}
@@ -139,15 +137,15 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 </style>
 </head>
 <body>
-<div class="wrap"><div class="container">
 
-  <div class="top">
+<!-- HEADER -->
+<div class="header jsx-af86871aeff69634">
+  <div class="header-inner">
     <button class="btn" id="refresh" title="Refresh">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       Refresh
     </button>
 
-    <!-- Bouton Filtres -->
     <div class="sheet" id="filters">
       <button class="btn-ghost" type="button" aria-haspopup="true" aria-expanded="false" id="filtersBtn">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"><path stroke-width="2" d="M3 4h18M6 12h12M10 20h4"/></svg>
@@ -171,16 +169,18 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
       </div>
     </div>
   </div>
+</div>
 
-  <!-- GRID -->
-  <div class="grid" id="grid">
+<!-- GRID -->
+<div class="image-grid-container">
+  <div class="image-grid" id="grid">
     ${items.map(it => {
       const first = it.media[0];
       const mtypes = it.media.map(m => m.type).join(',');
       const msrcs  = it.media.map(m => m.url).join('|');
       const hasCarousel = it.media.length>1;
       const showPin = it.pinned;
-      const showCarousel = hasCarousel && !showPin; // pin > carousel
+      const showCarousel = hasCarousel && !showPin;
       return `
       <figure class="card"
         data-platforms="${esc((it.platforms||[]).join(','))}"
@@ -197,14 +197,12 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
         }
         ${showPin ? `
           <div class="icn" title="Pinned">
-            <!-- Pin SVG -->
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M14 3l7 7-3 1-3 7-2-2-2-2 7-3 1-3-7-7zM5 21l6-6 2 2-6 6H5v-2z"/>
             </svg>
           </div>` : ``}
         ${showCarousel ? `
           <div class="icn" title="Carousel">
-            <!-- Stacked squares SVG -->
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M7 7h10v10H7z"/><path d="M3 3h10v10H3z"/>
             </svg>
@@ -216,17 +214,11 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
       </figure>`;
     }).join("")}
   </div>
+</div>
 
-  <div class="grid empty" id="empty">
-    ${Array.from({length:9}).map(()=>`<div class="ph">No Content</div>`).join("")}
-  </div>
-</div></div>
-
-<!-- LIGHTBOX -->
+<!-- LIGHTBOX (sans mini-galerie) -->
 <div class="backdrop" id="backdrop" aria-hidden="true">
   <div class="lightbox">
-
-    <!-- Colonne media -->
     <section class="lb-media">
       <div class="lb-top"><div class="lb-count" id="lb-count">1/1</div></div>
       <div class="stage" id="stage">
@@ -235,10 +227,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
         <video id="lb-vid" controls playsinline style="display:none; background:#000"></video>
         <button class="arrow right" id="next">›</button>
       </div>
-      <div class="thumbs" id="thumbs"></div>
     </section>
-
-    <!-- Colonne infos -->
     <aside class="lb-info" id="info">
       <div class="info-title" id="info-title"></div>
       <div class="info-row">
@@ -249,7 +238,6 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
       <div class="info-row" id="info-platforms"></div>
       <div class="info-desc" id="info-desc"></div>
     </aside>
-
   </div>
 </div>
 
@@ -261,7 +249,6 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 
   const grid = document.getElementById('grid');
   const cards = Array.from(grid.querySelectorAll('.card'));
-  const empty = document.getElementById('empty');
 
   // tri (pinned, date desc)
   cards.sort((a,b)=>{
@@ -272,21 +259,17 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   }).forEach(c=>grid.appendChild(c));
 
   function applyFilters(){
-    let shown=0;
     cards.forEach(c=>{
       const plats=(c.dataset.platforms||"").split(',').filter(Boolean);
       const st=c.dataset.status||"";
       const okPlat=!curPlat || plats.includes(curPlat);
       const okStat=!curStat || st===curStat;
-      const show=okPlat&&okStat;
-      c.style.display = show? "" : "none";
-      if(show) shown++;
+      c.style.display = (okPlat&&okStat)? "" : "none";
     });
-    empty.style.display = shown? "none" : "";
   }
   applyFilters();
 
-  // ===== Feuille de filtres
+  // Filtres
   const sheet = document.getElementById('filters');
   const btn   = document.getElementById('filtersBtn');
   btn.addEventListener('click', ()=>{
@@ -314,11 +297,11 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     history.replaceState(null,'',u); applyFilters();
   });
 
-  // ===== Refresh
+  // Refresh
   document.getElementById('refresh').addEventListener('click', ()=> location.reload());
   ${autoRefresh ? `setInterval(()=>location.reload(), ${autoRefresh*1000});` : ""}
 
-  // ===== LIGHTBOX (media + infos + thumbnails)
+  // LIGHTBOX (arrows only)
   const backdrop=document.getElementById('backdrop');
   const lbImg=document.getElementById('lb-img');
   const lbVid=document.getElementById('lb-vid');
@@ -326,7 +309,6 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   const prevBtn=document.getElementById('prev');
   const nextBtn=document.getElementById('next');
   const stage=document.getElementById('stage');
-  const thumbs=document.getElementById('thumbs');
 
   // info panel refs
   const infoTitle=document.getElementById('info-title');
@@ -337,21 +319,6 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   const infoDesc=document.getElementById('info-desc');
 
   let curList=[], curTypes=[], idx=0;
-
-  function renderThumbs(){
-    thumbs.innerHTML = curList.map((src,i)=>{
-      const t = curTypes[i];
-      if (t==='video'){
-        return \`<div class="thumb video" data-i="\${i}">▶</div>\`;
-      } else {
-        return \`<div class="thumb" data-i="\${i}"><img src="\${src}" alt=""></div>\`;
-      }
-    }).join("");
-    setActiveThumb(idx);
-  }
-  function setActiveThumb(i){
-    thumbs.querySelectorAll('.thumb').forEach(el=>el.classList.toggle('active', Number(el.dataset.i)===i));
-  }
 
   function showMedia(i){
     idx = i;
@@ -371,7 +338,6 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     const nav = curList.length>1;
     prevBtn.style.display = nav?"":"none";
     nextBtn.style.display = nav?"":"none";
-    setActiveThumb(i);
   }
 
   function fillInfoFromCard(card){
@@ -390,18 +356,21 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     infoPlatforms.innerHTML = "";
     const plats=(card.dataset.platforms||"").split(',').filter(Boolean);
     plats.forEach(p=>{
-      const span=document.createElement('span');
-      span.className='badge';
-      span.textContent=p;
-      infoPlatforms.appendChild(span);
+      const span=document.createElement('span'); span.className='badge'; span.textContent=p; infoPlatforms.appendChild(span);
     });
     infoDesc.textContent = card.dataset.desc || "";
   }
 
   function openLB(card){
-    curTypes = (card.dataset.mtypes||"").split(',').filter(Boolean);
-    curList  = (card.dataset.msrcs ||"").split('|').filter(Boolean);
-    renderThumbs();
+    // IMPORTANT : on lit toutes les sources/mimes du dataset (séparateurs identiques à la génération)
+    curTypes = (card.dataset.mtypes||"").split(',').map(s=>s.trim()).filter(Boolean);
+    curList  = (card.dataset.msrcs ||"").split('|').map(s=>s.trim()).filter(Boolean);
+
+    // Sécurité : si les longueurs ne matchent pas, on recadre
+    const L = Math.min(curTypes.length, curList.length);
+    curTypes = curTypes.slice(0,L);
+    curList  = curList.slice(0,L);
+
     showMedia(0);
     fillInfoFromCard(card);
     backdrop.style.display='flex';
@@ -413,16 +382,12 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     lbVid.pause(); lbVid.removeAttribute('src');
     lbImg.removeAttribute('src');
   }
-  function next(){ showMedia((idx+1) % curList.length); }
-  function prev(){ showMedia((idx-1+curList.length) % curList.length); }
+  function next(){ if(!curList.length) return; showMedia((idx+1) % curList.length); }
+  function prev(){ if(!curList.length) return; showMedia((idx-1+curList.length) % curList.length); }
 
   grid.addEventListener('click', e=>{
     const card=e.target.closest('.card'); if(!card || card.style.display==='none') return;
     openLB(card);
-  });
-  thumbs.addEventListener('click', e=>{
-    const t=e.target.closest('.thumb'); if(!t) return;
-    showMedia(Number(t.dataset.i));
   });
   nextBtn.addEventListener('click', next);
   prevBtn.addEventListener('click', prev);
