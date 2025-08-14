@@ -86,7 +86,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 }
 
 /* Cards */
-.card{position:relative;aspect-ratio:1/1;border-radius:var(--r);overflow:hidden;background:#f3f4f6;cursor:pointer}
+.card{position:relative;aspect-ratio:4/5;width:100%;height:auto;;overflow:hidden;background:#f3f4f6;cursor:pointer}
 .card img,.card video{width:100%;height:100%;object-fit:cover;display:block}
 .card video{background:#000}
 
