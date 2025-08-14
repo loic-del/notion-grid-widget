@@ -86,10 +86,42 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:999px;background:rgba(17,24,39,.7);display:grid;place-items:center;color:#fff;font-size:20px}
 
 /* hover bar */
-.hoverbar{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent, rgba(0,0,0,.8));color:#fff;padding:10px 12px;transform:translateY(60%);transition:.18s ease;display:grid;gap:6px}
-.card:hover .hoverbar{transform:translateY(0)}
-.h-title{font-weight:700;font-size:15px;line-height:1.2;text-shadow:0 1px 0 rgba(0,0,0,.2)}
-.h-desc{font-size:12px;opacity:.95;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* hover bar — cachée par défaut, visible au survol */
+.hoverbar{
+  position:absolute;
+  left:0; right:0; bottom:0;
+  background:linear-gradient(transparent, rgba(0,0,0,.85));
+  color:#fff;
+  padding:10px 12px;
+  display:grid; gap:6px;
+  transform:translateY(100%);   /* totalement hors cadre */
+  opacity:0;                    /* invisible */
+  pointer-events:none;          /* pas d’interaction tant qu’invisible */
+  transition:transform .18s ease, opacity .18s ease;
+}
+
+.card:hover .hoverbar{
+  transform:translateY(0);
+  opacity:1;
+  pointer-events:auto;
+}
+
+.h-title{
+  font-weight:700;
+  font-size:15px;
+  line-height:1.2;
+  text-shadow:0 1px 0 rgba(0,0,0,.2);
+}
+
+.h-desc{
+  font-size:12px;
+  opacity:.95;
+  display:-webkit-box;
+  -webkit-line-clamp:2;         /* 2 lignes max */
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
 .h-meta{font-size:12px;opacity:.9}
 
 /* empty */
