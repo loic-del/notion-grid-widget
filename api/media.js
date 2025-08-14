@@ -67,6 +67,27 @@ export default async function handler(req, res) {
         return res.status(200).send(buf);
       }
     }
+    // pages/api/media.js
+export default async function handler(req, res) {
+  try {
+    const url = req.query.url;
+    if (!url) {
+      res.status(400).send("Missing url");
+      return;
+    }
+    const upstream = await fetch(url);
+    // recopie Content-Type & Cache
+    const ct = upstream.headers.get("content-type") || "application/octet-stream";
+    res.setHeader("Content-Type", ct);
+    res.setHeader("Cache-Control", "public, max-age=300"); // 5 min
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.status(200).send(buf);
+  } catch (e) {
+    console.error("/api/media error:", e);
+    res.status(500).send("Proxy error");
+  }
+}
+
 
     // Fallback
     res.status(200).setHeader("Content-Type","image/svg+xml").send(
