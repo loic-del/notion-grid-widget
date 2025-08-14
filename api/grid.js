@@ -26,12 +26,10 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "public, max-age=120");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.status(200).send(html);
-  } catch (err) {
-    console.error(err);
-    res.status(500)
-      .setHeader("Content-Type","text/plain; charset=utf-8")
-      .end("Internal Error: " + (err?.message || String(err)) + "\n\n" + (err?.stack || ""));
-  }
+  } } catch (err) {
+  console.error("ERROR in /api/grid:", err); // <-- log complet
+  res.status(500).send(`Internal Error: ${err.message || err}`);
+}
 }
 
 function esc(s = "") {
