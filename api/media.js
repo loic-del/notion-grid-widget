@@ -1,4 +1,4 @@
-// /api/media?url=ENCODED_URL
+// pages/api/media.js
 export default async function handler(req, res) {
   const target = req.query.url;
   if (!target) return res.status(400).send("Missing url");
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
     const ct1 = (r1.headers.get("content-type") || "").toLowerCase();
 
-    // Déjà image/vidéo → stream direct
+    // 1) Déjà image/vidéo ?
     if (ct1.startsWith("image/") || ct1.startsWith("video/")) {
       const buf = Buffer.from(await r1.arrayBuffer());
       res.setHeader("Content-Type", ct1);
@@ -24,11 +24,11 @@ export default async function handler(req, res) {
       return res.status(200).send(buf);
     }
 
-    // HTML → cherche og:video / twitter:player:stream / og:image / twitter:image
+    // 2) Page HTML → extraire meta OG
     if (ct1.includes("text/html")) {
       const html = await r1.text();
-      const tryMatch = (...regexes) => {
-        for (const re of regexes) {
+      const pick = (...reses) => {
+        for (const re of reses) {
           const m = html.match(re);
           if (m && m[1]) return m[1];
         }
@@ -37,16 +37,16 @@ export default async function handler(req, res) {
 
       // priorité vidéo
       let mediaUrl =
-        tryMatch(
+        pick(
           /<meta[^>]+property=["']og:video:secure_url["'][^>]+content=["']([^"']+)["']/i,
           /<meta[^>]+property=["']og:video["'][^>]+content=["']([^"']+)["']/i,
-          /<meta[^>]+name=["']twitter:player:stream["'][^>]+content=["']([^"']+)["']/i,
+          /<meta[^>]+name=["']twitter:player:stream["'][^>]+content=["']([^"']+)["']/i
         ) ||
-        tryMatch( // fallback image
+        pick(
           /<meta[^>]+property=["']og:image:secure_url["'][^>]+content=["']([^"']+)["']/i,
           /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
           /<meta[^>]+name=["']twitter:image:src["'][^>]+content=["']([^"']+)["']/i,
-          /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+          /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i
         );
 
       if (mediaUrl) {
@@ -55,41 +55,20 @@ export default async function handler(req, res) {
           redirect: "follow",
           headers: {
             "User-Agent": "Mozilla/5.0",
-            "Referer": "https://www.canva.com/",
+            "Referer": r1.url, // certains CDNs vérifient le referer
             "Accept": "image/avif,image/webp,image/*,video/*,*/*;q=0.8",
           },
         });
         if (!r2.ok) throw new Error(`OG media upstream ${r2.status}`);
-        const ct2 = r2.headers.get("content-type") || "application/octet-stream";
+        const ct2 = (r2.headers.get("content-type") || "application/octet-stream").toLowerCase();
         const buf = Buffer.from(await r2.arrayBuffer());
         res.setHeader("Content-Type", ct2);
         res.setHeader("Cache-Control", "public, s-maxage=86400, max-age=86400, stale-while-revalidate=604800");
         return res.status(200).send(buf);
       }
     }
-    // pages/api/media.js
-export default async function handler(req, res) {
-  try {
-    const url = req.query.url;
-    if (!url) {
-      res.status(400).send("Missing url");
-      return;
-    }
-    const upstream = await fetch(url);
-    // recopie Content-Type & Cache
-    const ct = upstream.headers.get("content-type") || "application/octet-stream";
-    res.setHeader("Content-Type", ct);
-    res.setHeader("Cache-Control", "public, max-age=300"); // 5 min
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    res.status(200).send(buf);
-  } catch (e) {
-    console.error("/api/media error:", e);
-    res.status(500).send("Proxy error");
-  }
-}
 
-
-    // Fallback
+    // 3) Fallback : un placeholder
     res.status(200).setHeader("Content-Type","image/svg+xml").send(
       `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200"><rect width="100%" height="100%" fill="#e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="32" fill="#9ca3af">Media unavailable</text></svg>`
     );
