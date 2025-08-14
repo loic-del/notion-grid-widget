@@ -32,7 +32,6 @@ export default async function handler(req, res) {
 const esc = s => String(s||"").replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function renderHTML({ items, gap, radius, autoRefresh }) {
-  // stats pour panneaux de filtres
   const stats = { platforms:new Map(), status:new Map(), total:items.length };
   for (const it of items) {
     (it.platforms||[]).forEach(p=>stats.platforms.set(p,(stats.platforms.get(p)||0)+1));
@@ -71,76 +70,56 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 .opt-item.active .opt-radio{background:#111827}
 .opt-count{font-size:12px;color:#6b7280}
 
-/* Au cas où des anciens pills existent */
-.dd-btn,.dd-btn *{color:#111827 !important;}
-
 /* ===== GRID — 3 colonnes fixes ===== */
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap)}
 .card{position:relative;aspect-ratio:1/1;border-radius:var(--r);overflow:hidden;background:#f3f4f6;cursor:pointer}
 .card img,.card video{width:100%;height:100%;object-fit:cover;display:block}
 .card video{background:#000}
 
-/* Overlays */
-.pin{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:8px;background:rgba(17,24,39,.85);color:#fff;display:grid;place-items:center;font-size:13px}
-.stack{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:8px;background:rgba(17,24,39,.85);color:#fff;display:grid;place-items:center;font-size:12px}
+/* Overlays façon IG (top-right) */
+.icn{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:8px;background:rgba(17,24,39,.85);
+     color:#fff;display:grid;place-items:center}
+.icn svg{width:14px;height:14px}
+
+/* Bouton play (tuile vidéo) */
 .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:999px;background:rgba(17,24,39,.7);display:grid;place-items:center;color:#fff;font-size:20px}
 
-/* hover bar */
-/* hover bar — cachée par défaut, visible au survol */
+/* hover bar — cachée par défaut, visible uniquement au survol */
 .hoverbar{
-  position:absolute;
-  left:0; right:0; bottom:0;
-  background:linear-gradient(transparent, rgba(0,0,0,.85));
-  color:#fff;
-  padding:10px 12px;
-  display:grid; gap:6px;
-  transform:translateY(100%);   /* totalement hors cadre */
-  opacity:0;                    /* invisible */
-  pointer-events:none;          /* pas d’interaction tant qu’invisible */
+  position:absolute;left:0;right:0;bottom:0;
+  background:linear-gradient(transparent, rgba(0,0,0,.85));color:#fff;
+  padding:10px 12px;display:grid;gap:6px;
+  transform:translateY(100%);opacity:0;pointer-events:none;
   transition:transform .18s ease, opacity .18s ease;
 }
-
-.card:hover .hoverbar{
-  transform:translateY(0);
-  opacity:1;
-  pointer-events:auto;
-}
-
-.h-title{
-  font-weight:700;
-  font-size:15px;
-  line-height:1.2;
-  text-shadow:0 1px 0 rgba(0,0,0,.2);
-}
-
-.h-desc{
-  font-size:12px;
-  opacity:.95;
-  display:-webkit-box;
-  -webkit-line-clamp:2;         /* 2 lignes max */
-  -webkit-box-orient:vertical;
-  overflow:hidden;
-}
-
-.h-meta{font-size:12px;opacity:.9}
+.card:hover .hoverbar{transform:translateY(0);opacity:1;pointer-events:auto}
+.h-title{font-weight:700;font-size:15px;line-height:1.2;text-shadow:0 1px 0 rgba(0,0,0,.2)}
+.h-desc{font-size:12px;opacity:.95;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* empty */
 .empty{display:none;margin-top:var(--gap)}
 .ph{aspect-ratio:1/1;border-radius:var(--r);background:#e5e7eb;display:grid;place-items:center;color:#9ca3af;font-size:12px}
 
-/* ===== LIGHTBOX (media + panneau d'infos) ===== */
+/* ===== LIGHTBOX (media + panneau d'infos + thumbnails) ===== */
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
 .lightbox{
   background:#111;border-radius:16px;max-width:min(95vw,1200px);max-height:92vh;overflow:hidden;
   display:grid;grid-template-columns: minmax(0,1fr) 380px; /* media | info */
 }
-.lb-media{position:relative;background:#000;display:grid;grid-template-rows: auto 1fr}
+.lb-media{position:relative;background:#000;display:grid;grid-template-rows: auto 1fr auto}
 .lb-top{display:flex;justify-content:flex-end;padding:8px}
 .lb-count{background:rgba(17,24,39,.85);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px}
 .stage{position:relative;display:grid;place-items:center}
-.stage img,.stage video{max-width:100%;max-height:84vh;width:auto;height:auto;display:block}
+.stage img,.stage video{max-width:100%;max-height:76vh;width:auto;height:auto;display:block}
 .arrow{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:999px;border:none;background:rgba(17,24,39,.85);color:#fff;display:grid;place-items:center;font-size:18px;cursor:pointer}
 .arrow.left{left:12px}.arrow.right{right:12px}
+
+/* Thumbnails */
+.thumbs{display:flex;gap:6px;padding:8px;overflow:auto;background:#0b0b0b}
+.thumb{width:56px;height:56px;border-radius:8px;background:#1f2937;display:grid;place-items:center;opacity:.65;cursor:pointer;flex:0 0 auto}
+.thumb img{width:100%;height:100%;object-fit:cover;border-radius:8px;display:block}
+.thumb.video{color:#fff;font-size:18px}
+.thumb.active{outline:2px solid #fff;opacity:1}
 
 /* panneau d'infos */
 .lb-info{background:#fff;color:#111827;display:flex;flex-direction:column;padding:18px 16px 16px}
@@ -152,7 +131,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 .info-date{font-size:12px;color:#6b7280}
 .info-desc{font-size:14px;line-height:1.5;margin-top:8px;white-space:pre-wrap}
 
-/* Responsive (si très étroit, on empile le panneau) */
+/* Responsive */
 @media (max-width: 960px){
   .lightbox{grid-template-columns: 1fr;}
   .lb-info{max-height:45vh;overflow:auto}
@@ -177,15 +156,14 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
       <div class="sheet-panel" role="dialog" aria-label="Filtres">
         <div class="opt-group" id="grp-platforms">
           <div class="opt-title">Platforms</div>
-          <div class="opt-item active" data-value=""><div class="opt-left"><span class="opt-radio"></span>All Platforms</div><span class="opt-count" id="plat-all-count">(${stats.total})</span></div>
+          <div class="opt-item active" data-value=""><div class="opt-left"><span class="opt-radio"></span>All Platforms</div><span class="opt-count">(${stats.total})</span></div>
           ${[...stats.platforms.keys()].sort().map(p=>`
             <div class="opt-item" data-value="${esc(p)}"><div class="opt-left"><span class="opt-radio"></span>${esc(p)}</div><span class="opt-count">(${stats.platforms.get(p)||0})</span></div>
           `).join("")}
         </div>
-
         <div class="opt-group" id="grp-status">
           <div class="opt-title">Status</div>
-          <div class="opt-item active" data-value=""><div class="opt-left"><span class="opt-radio"></span>All Status</div><span class="opt-count" id="stat-all-count">(${stats.total})</span></div>
+          <div class="opt-item active" data-value=""><div class="opt-left"><span class="opt-radio"></span>All Status</div><span class="opt-count">(${stats.total})</span></div>
           ${[...stats.status.keys()].sort().map(s=>`
             <div class="opt-item" data-value="${esc(s)}"><div class="opt-left"><span class="opt-radio"></span>${esc(s)}</div><span class="opt-count">(${stats.status.get(s)||0})</span></div>
           `).join("")}
@@ -200,6 +178,9 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
       const first = it.media[0];
       const mtypes = it.media.map(m => m.type).join(',');
       const msrcs  = it.media.map(m => m.url).join('|');
+      const hasCarousel = it.media.length>1;
+      const showPin = it.pinned;
+      const showCarousel = hasCarousel && !showPin; // pin > carousel
       return `
       <figure class="card"
         data-platforms="${esc((it.platforms||[]).join(','))}"
@@ -214,12 +195,23 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
           ? `<video muted playsinline preload="metadata" src="${esc(first.url)}"></video><div class="play">▶</div>`
           : `<img src="${esc(first.url)}" alt="${esc(it.name)}" loading="lazy"/>`
         }
-        ${it.pinned ? `<div class="pin">★</div>` : ``}
-        ${it.media.length>1 ? `<div class="stack">▣</div>` : ``}
+        ${showPin ? `
+          <div class="icn" title="Pinned">
+            <!-- Pin SVG -->
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 3l7 7-3 1-3 7-2-2-2-2 7-3 1-3-7-7zM5 21l6-6 2 2-6 6H5v-2z"/>
+            </svg>
+          </div>` : ``}
+        ${showCarousel ? `
+          <div class="icn" title="Carousel">
+            <!-- Stacked squares SVG -->
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 7h10v10H7z"/><path d="M3 3h10v10H3z"/>
+            </svg>
+          </div>` : ``}
         <figcaption class="hoverbar">
           <div class="h-title">${esc(it.name)}</div>
           <div class="h-desc">${esc((it.description||"").slice(0,180))}</div>
-          <div class="h-meta">${it.date ? new Date(it.date).toLocaleDateString() : ""}</div>
         </figcaption>
       </figure>`;
     }).join("")}
@@ -243,6 +235,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
         <video id="lb-vid" controls playsinline style="display:none; background:#000"></video>
         <button class="arrow right" id="next">›</button>
       </div>
+      <div class="thumbs" id="thumbs"></div>
     </section>
 
     <!-- Colonne infos -->
@@ -325,7 +318,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   document.getElementById('refresh').addEventListener('click', ()=> location.reload());
   ${autoRefresh ? `setInterval(()=>location.reload(), ${autoRefresh*1000});` : ""}
 
-  // ===== LIGHTBOX (media + infos)
+  // ===== LIGHTBOX (media + infos + thumbnails)
   const backdrop=document.getElementById('backdrop');
   const lbImg=document.getElementById('lb-img');
   const lbVid=document.getElementById('lb-vid');
@@ -333,6 +326,7 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
   const prevBtn=document.getElementById('prev');
   const nextBtn=document.getElementById('next');
   const stage=document.getElementById('stage');
+  const thumbs=document.getElementById('thumbs');
 
   // info panel refs
   const infoTitle=document.getElementById('info-title');
@@ -344,7 +338,23 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
 
   let curList=[], curTypes=[], idx=0;
 
+  function renderThumbs(){
+    thumbs.innerHTML = curList.map((src,i)=>{
+      const t = curTypes[i];
+      if (t==='video'){
+        return \`<div class="thumb video" data-i="\${i}">▶</div>\`;
+      } else {
+        return \`<div class="thumb" data-i="\${i}"><img src="\${src}" alt=""></div>\`;
+      }
+    }).join("");
+    setActiveThumb(idx);
+  }
+  function setActiveThumb(i){
+    thumbs.querySelectorAll('.thumb').forEach(el=>el.classList.toggle('active', Number(el.dataset.i)===i));
+  }
+
   function showMedia(i){
+    idx = i;
     const t = curTypes[i], src = curList[i];
     lbImg.style.display='none'; lbVid.style.display='none';
     if (t==='video'){
@@ -361,28 +371,22 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     const nav = curList.length>1;
     prevBtn.style.display = nav?"":"none";
     nextBtn.style.display = nav?"":"none";
+    setActiveThumb(i);
   }
 
   function fillInfoFromCard(card){
     infoTitle.textContent = card.dataset.name || "";
-    // status
     const st = card.dataset.status || "";
     if (st){
       infoStatus.style.display='inline-block';
       infoStatus.textContent = st;
-      // petite couleur indicative
       const s = st.toLowerCase();
-      infoStatus.classList.toggle('green', /approved|published|ok|ready/.test(s));
-      infoStatus.classList.toggle('yellow', /draft|pending|planned|planifié|planning/.test(s));
+      infoStatus.className='badge';
+      if (/approved|published|ok|ready|valid/.test(s)) infoStatus.classList.add('green');
+      else if (/draft|pending|planned|planifié|planning/.test(s)) infoStatus.classList.add('yellow');
     } else { infoStatus.style.display='none'; infoStatus.className='badge'; }
-
-    // pinned
     infoPinned.style.display = card.dataset.pinned === "true" ? 'inline-block' : 'none';
-
-    // date
     infoDate.textContent = card.dataset.date ? new Date(card.dataset.date).toLocaleString() : "";
-
-    // platforms chips
     infoPlatforms.innerHTML = "";
     const plats=(card.dataset.platforms||"").split(',').filter(Boolean);
     plats.forEach(p=>{
@@ -391,20 +395,15 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
       span.textContent=p;
       infoPlatforms.appendChild(span);
     });
-
-    // description
     infoDesc.textContent = card.dataset.desc || "";
   }
 
   function openLB(card){
-    // médias
     curTypes = (card.dataset.mtypes||"").split(',').filter(Boolean);
     curList  = (card.dataset.msrcs ||"").split('|').filter(Boolean);
-    idx = 0;
-    showMedia(idx);
-    // infos
+    renderThumbs();
+    showMedia(0);
     fillInfoFromCard(card);
-
     backdrop.style.display='flex';
     document.body.style.overflow='hidden';
   }
@@ -414,19 +413,20 @@ function renderHTML({ items, gap, radius, autoRefresh }) {
     lbVid.pause(); lbVid.removeAttribute('src');
     lbImg.removeAttribute('src');
   }
-  function next(){ idx = (idx+1) % curList.length; showMedia(idx); }
-  function prev(){ idx = (idx-1+curList.length) % curList.length; showMedia(idx); }
+  function next(){ showMedia((idx+1) % curList.length); }
+  function prev(){ showMedia((idx-1+curList.length) % curList.length); }
 
   grid.addEventListener('click', e=>{
     const card=e.target.closest('.card'); if(!card || card.style.display==='none') return;
     openLB(card);
   });
+  thumbs.addEventListener('click', e=>{
+    const t=e.target.closest('.thumb'); if(!t) return;
+    showMedia(Number(t.dataset.i));
+  });
   nextBtn.addEventListener('click', next);
   prevBtn.addEventListener('click', prev);
-  backdrop.addEventListener('click', e=>{
-    // fermer si on clique en dehors de la modale (pas sur la modale)
-    if(e.target===backdrop) closeLB();
-  });
+  backdrop.addEventListener('click', e=>{ if(e.target===backdrop) closeLB(); });
   document.addEventListener('keydown', e=>{
     if(backdrop.style.display!=='flex') return;
     if(e.key==='Escape') closeLB();
